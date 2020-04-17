@@ -1,18 +1,25 @@
 package com.harshithd.firebasestorage
 
 import android.content.Intent
-import android.media.Image
-import androidx.appcompat.app.AppCompatActivity
+import android.database.Cursor
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
+import com.google.firebase.storage.FirebaseStorage
 import com.myhexaville.smartimagepicker.ImagePicker
 import kotlinx.android.synthetic.main.activity_main.*
 
+
 class MainActivity : AppCompatActivity() {
+
+    lateinit var selectedImage: Uri
 
     private val imagePicker by lazy {
         ImagePicker(this, null) { uri ->
             ivSelectedImage.setImageURI(uri)
+            selectedImage = uri
         }
     }
 
@@ -23,13 +30,22 @@ class MainActivity : AppCompatActivity() {
             imagePicker.choosePicture(false)
         }
         ivSelectedImage.setOnClickListener {
-            uploadImage()
+            uploadImage(selectedImage)
         }
     }
 
-    private fun uploadImage() {
+    // upload the selected image to Firebase Storage
+    private fun uploadImage(selectedImage: Uri) {
         progressUpload.visibility = View.VISIBLE
-        // TODO: add code for uploading the image here
+        val storageRef = FirebaseStorage.getInstance().reference
+        val fileName = displayName(selectedImage)
+
+        storageRef
+            .child(fileName ?: "")
+            .putFile(selectedImage)
+            .addOnCompleteListener {
+                progressUpload.visibility = View.GONE
+            }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -45,4 +61,15 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         imagePicker.handlePermission(requestCode, grantResults)
     }
+
+    private fun displayName(uri: Uri): String? {
+        val cursor: Cursor =
+            applicationContext.contentResolver.query(uri, null, null, null, null)!!
+        val indexedname: Int = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+        cursor.moveToFirst()
+        val filename: String = cursor.getString(indexedname)
+        cursor.close()
+        return filename
+    }
+
 }
