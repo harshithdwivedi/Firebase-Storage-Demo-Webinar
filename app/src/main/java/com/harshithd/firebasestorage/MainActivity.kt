@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.storage.FirebaseStorage
 import com.myhexaville.smartimagepicker.ImagePicker
 import kotlinx.android.synthetic.main.activity_main.*
@@ -15,6 +16,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 class MainActivity : AppCompatActivity() {
 
     lateinit var selectedImage: Uri
+    val images = arrayListOf<UploadedImage>()
 
     private val imagePicker by lazy {
         ImagePicker(this, null) { uri ->
@@ -32,6 +34,9 @@ class MainActivity : AppCompatActivity() {
         ivSelectedImage.setOnClickListener {
             uploadImage(selectedImage)
         }
+        val imageAdapter = ImageAdapter(images)
+        rvItems.layoutManager = LinearLayoutManager(this)
+        rvItems.adapter = imageAdapter
     }
 
     // upload the selected image to Firebase Storage
