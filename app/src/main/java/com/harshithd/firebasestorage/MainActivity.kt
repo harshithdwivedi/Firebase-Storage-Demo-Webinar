@@ -5,9 +5,11 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.util.Log
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import com.google.firebase.storage.FirebaseStorage
 import com.myhexaville.smartimagepicker.ImagePicker
 import kotlinx.android.synthetic.main.activity_main.*
@@ -15,9 +17,12 @@ import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
 
+    val rootReference = FirebaseStorage.getInstance().reference
+    val uploadReference = rootReference.child("upload")
+
     lateinit var selectedImage: Uri
     val images = arrayListOf<UploadedImage>()
-
+    val imageAdapter = ImageAdapter(images)
     private val imagePicker by lazy {
         ImagePicker(this, null) { uri ->
             ivSelectedImage.setImageURI(uri)
@@ -34,23 +39,62 @@ class MainActivity : AppCompatActivity() {
         ivSelectedImage.setOnClickListener {
             uploadImage(selectedImage)
         }
-        val imageAdapter = ImageAdapter(images)
-        rvItems.layoutManager = LinearLayoutManager(this)
+        ivRefresh.setOnClickListener {
+            fetchImagesFromStorage()
+        }
+
+        rvItems.layoutManager = GridLayoutManager(this, 2)
         rvItems.adapter = imageAdapter
+    }
+
+    private fun fetchImagesFromStorage() {
+        images.clear()
+        imageAdapter.notifyDataSetChanged()
+
+        uploadReference.listAll()
+            .addOnSuccessListener {
+                val files = it.items
+                files.forEach { currentFile ->
+                    val name = currentFile.name
+                    currentFile.downloadUrl
+                        .addOnSuccessListener {
+                            Log.e("Name Tag", "The file name is $name")
+                            Log.e("URL Tag", "The URL is $it")
+
+                            val currentImage = UploadedImage(it, name)
+                            images.add(currentImage)
+//                            imageAdapter.notifyDataSetChanged()
+
+                            imageAdapter.notifyItemInserted(images.size - 1)
+                        }
+                }
+            }
+            .addOnFailureListener {
+
+            }
     }
 
     // upload the selected image to Firebase Storage
     private fun uploadImage(selectedImage: Uri) {
         progressUpload.visibility = View.VISIBLE
-        val storageRef = FirebaseStorage.getInstance().reference
+
         val fileName = displayName(selectedImage)
 
-        storageRef
+        val uploadTask = uploadReference
             .child(fileName ?: "")
             .putFile(selectedImage)
+            .addOnSuccessListener {
+                Toast.makeText(baseContext, "Upload complete!!", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener {
+                Toast.makeText(baseContext, "Upload failed, please retry!!", Toast.LENGTH_SHORT)
+                    .show()
+            }
             .addOnCompleteListener {
                 progressUpload.visibility = View.GONE
             }
+
+//        uploadTask.cancel()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

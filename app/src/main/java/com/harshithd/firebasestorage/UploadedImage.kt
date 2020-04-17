@@ -1,3 +1,5 @@
 package com.harshithd.firebasestorage
 
-class UploadedImage(val url: String, val name: String)
+import android.net.Uri
+
+class UploadedImage(val url: Uri, val name: String)
