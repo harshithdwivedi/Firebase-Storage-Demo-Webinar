@@ -17,6 +17,7 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var selectedImage: Uri
     val images = arrayListOf<UploadedImage>()
+    val imageAdapter = ImageAdapter(images)
 
     private val imagePicker by lazy {
         ImagePicker(this, null) { uri ->
@@ -34,9 +35,35 @@ class MainActivity : AppCompatActivity() {
         ivSelectedImage.setOnClickListener {
             uploadImage(selectedImage)
         }
-        val imageAdapter = ImageAdapter(images)
+
         rvItems.layoutManager = LinearLayoutManager(this)
         rvItems.adapter = imageAdapter
+
+        ivRefresh.setOnClickListener {
+            fetchFiles()
+        }
+    }
+
+    // download the files from firebase storage
+    private fun fetchFiles() {
+        images.clear()
+        FirebaseStorage.getInstance().reference.listAll()
+            .addOnSuccessListener { result ->
+
+                val files = result.items
+
+                files.forEach { file ->
+
+                    file.downloadUrl.addOnSuccessListener { url ->
+                        val uploadedImage = UploadedImage(url, file.name)
+                        images.add(uploadedImage)
+                        imageAdapter.notifyItemInserted(images.size - 1)
+                    }
+                }
+            }
+            .addOnFailureListener {
+                it.printStackTrace()
+            }
     }
 
     // upload the selected image to Firebase Storage
